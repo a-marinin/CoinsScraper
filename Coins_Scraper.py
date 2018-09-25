@@ -2,10 +2,10 @@ import bs4 as bs
 import urllib.request
 import pandas as pd
 
-# Scrape all coins from the list
+# Scrape all coins from the "coins_to_scrape" list
 def scrape_preview_page(coin_id):
     """
-        This function receives "coins_id" from "coins_to_scrape list".
+        This function receives "coins_id" from "coins_to_scrape" list.
         It scrapes coin's data from the list into the pandas DataFrame
         Then it saves this DataFrame as Excel sheet.
         It scrapes Country, Value, Year, Metal, Marks, Mintage, Krause code, Price, Quality, Details, Avers, Revers and Gcoins link data
@@ -13,26 +13,36 @@ def scrape_preview_page(coin_id):
     gcoins_link = 'http://www.gcoins.net/en/catalog/view/{}'.format(coin_id)
     source = urllib.request.urlopen(gcoins_link).read()
     soup = bs.BeautifulSoup(source, 'lxml')
-
     print("Scrapping the information about the coin № " + str(coin_id))
-
-    table = soup.find('table', attrs={'class': 'subs noBorders evenRows'})  # The table of mintages
-    table_rows = table.find_all('tr')                                       # Find all table rows
-
-    res = []                                                                # New list of all coins
-    for tr in table_rows:                                                   # Find all table_cells (td) in table_row
+    # The table of mintages
+    table = soup.find('table', attrs={'class': 'subs noBorders evenRows'})
+    # Find all table rows
+    table_rows = table.find_all('tr')                                       
+    # Empty list
+    res = []   
+    # Find all table_cells (td) in table_row
+    for tr in table_rows:
         td = tr.find_all('td')
         row = [tr.text for tr in td]
-        res.append(row)                                                     # Append each <td> in the "res" list
-
-    krause = soup.find("p", {"class": "krause"}).text                                                # Find the Krause number
-    desc = soup.find("p", {"class": "desc"}).text                                                    # Find description (country/denomination)
+        # Append each <td> in the "res" list
+        res.append(row)
+        
+    # Find the Krause number
+    krause = soup.find("p", {"class": "krause"}).text
+    # Find description (country/denomination)
+    desc = soup.find("p", {"class": "desc"}).text                                                    
     details = soup.find("p", {"class": "details"}).text
-    material = soup.find('td', {'class' : 'storeItemDescription'})                                   # Find all <td> in "storeItemDescription"
-    material2 = material.findAll('p')[2].text                                                        # Find material ("Bronze")
-    image = soup.find('img', {"class": ['shadowIn', 'coin', 'imgARRotate']}).get('src')              # Get the image <src>
-    image_a = image.replace('/coins/', 'http://www.gcoins.net/coins/')                               # Avers of coin
-    image_r = image.replace('_a.jpg', '_r.jpg').replace('/coins/', 'http://www.gcoins.net/coins/')   # Revers of coin
+    # Find all <td> in "storeItemDescription"
+    material = soup.find('td', {'class' : 'storeItemDescription'})
+    # Find material (For example: "Bronze")
+    material2 = material.findAll('p')[2].text
+    # Get the image <src>
+    image = soup.find('img', {"class": ['shadowIn', 'coin', 'imgARRotate']}).get('src')
+    # Get the avers of coin
+    image_a = image.replace('/coins/', 'http://www.gcoins.net/coins/')
+    # Get the revers of coin
+    image_r = image.replace('_a.jpg', '_r.jpg').replace('/coins/', 'http://www.gcoins.net/coins/')
+    #  Create pandas DataFrame from the "res" list
     df = pd.DataFrame(res, columns=["foo", "bar", "Year", "Marks", "Mintage", "Quality", "Price"])
     df['Krause'] = krause
     df['Country'] = desc.split(",")[0]
@@ -42,17 +52,20 @@ def scrape_preview_page(coin_id):
     df['Avers'] = image_a
     df['Revers'] = image_r
     df['Gcoins_link'] = gcoins_link
-    df = df.drop(['foo'], axis='columns').drop(0)                                                    # Cut first 2 coukmns and 1st row
+    # Drop the first 2 columns and the first row of the DataFrame
+    df = df.drop(['foo'], axis='columns').drop(0)                                                    
     df = df[['Country', 'Value', 'Year', 'Metal', 'Marks', 'Mintage', 'Krause', 'Price', 'Quality', 'Details', 'Avers', 'Revers', 'Gcoins_link']]
-    return df[['Country', 'Value', 'Year', 'Metal', 'Marks', 'Mintage', 'Krause', 'Price', 'Quality', 'Details', 'Avers', 'Revers', 'Gcoins_link']]
+    return df
 
-
+# Get all coin-ids from a tile page
 def scrape_tile_page(link):
+    """
+        This function receives a link of a tile page.
+        It scrapes all coin-ids on this page and outputs it to your console window.
+    """
     source = urllib.request.urlopen(link).read()
     soup = bs.BeautifulSoup(source, 'lxml')
-
     print("On the page " + str(link) + " there are following coins:")
-
     links = [i.get("href") for i in soup.find_all('a', attrs={'class': 'view'})]
     # List comprehensions
     links = [l.replace('/en/catalog/view/', '') for l in links]
